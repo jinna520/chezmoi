@@ -850,6 +850,10 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 		inconsistent := false
 		for _, sourceStateEntry := range sourceStateEntries[1:] {
 			if !sourceStateEntry.Equivalent(sourceStateEntries[0]) {
+				log.Debug().
+					Object("sourceStateEntry", sourceStateEntry).
+					Object("sourceStateEntry0", sourceStateEntries[0]).
+					Msg("inconsistent source state entry")
 				inconsistent = true
 				break
 			}

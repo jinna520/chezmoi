@@ -2,10 +2,15 @@ package chezmoi
 
 import (
 	"bytes"
+	"encoding/hex"
+
+	"github.com/rs/zerolog"
+	"github.com/twpayne/chezmoi/v2/internal/chezmoilog"
 )
 
 // A SourceStateEntry represents the state of an entry in the source state.
 type SourceStateEntry interface {
+	zerolog.LogObjectMarshaler
 	Equivalent(other SourceStateEntry) bool
 	Evaluate() error
 	Order() int
@@ -59,6 +64,12 @@ func (s *SourceStateDir) Evaluate() error {
 	return nil
 }
 
+// MarshalZerologObject implements zerolog.LogObjectMarshaler.
+func (s *SourceStateDir) MarshalZerologObject(e *zerolog.Event) {
+	e.Stringer("sourceRelPath", s.sourceRelPath)
+	e.Object("attr", s.Attr)
+}
+
 // Order returns s's order.
 func (s *SourceStateDir) Order() int {
 	return 0
@@ -103,6 +114,23 @@ func (s *SourceStateFile) Evaluate() error {
 	return err
 }
 
+// MarshalZerologObject implements zerolog.LogObjectMarshaler.
+func (s *SourceStateFile) MarshalZerologObject(e *zerolog.Event) {
+	e.Stringer("sourceRelPath", s.sourceRelPath)
+	e.Interface("attr", s.Attr)
+	contents, contentsErr := s.Contents()
+	e.Bytes("contents", chezmoilog.FirstFewBytes(contents))
+	if contentsErr != nil {
+		e.Str("contentsErr", contentsErr.Error())
+	}
+	e.Err(contentsErr)
+	contentsSHA256, contentsSHA256Err := s.ContentsSHA256()
+	e.Str("contentsSHA256", hex.EncodeToString(contentsSHA256))
+	if contentsSHA256Err != nil {
+		e.Str("contentsSHA256Err", contentsSHA256Err.Error())
+	}
+}
+
 // Order returns s's order.
 func (s *SourceStateFile) Order() int {
 	return s.Attr.Order
@@ -139,6 +167,11 @@ func (s *SourceStateRemove) Evaluate() error {
 	return nil
 }
 
+// MarshalZerologObject implements zerolog.LogObjectMarshaler.
+func (s *SourceStateRemove) MarshalZerologObject(e *zerolog.Event) {
+	e.Stringer("targetRelPath", s.targetRelPath)
+}
+
 // Order returns s's order.
 func (s *SourceStateRemove) Order() int {
 	return 0
@@ -172,6 +205,12 @@ func (s *SourceStateRenameDir) Equivalent(other SourceStateEntry) bool {
 // Evaluate evaluates s and returns any error.
 func (s *SourceStateRenameDir) Evaluate() error {
 	return nil
+}
+
+// MarashalLogObject implements zerolog.LogObjectMarshaler.
+func (s *SourceStateRenameDir) MarshalZerologObject(e *zerolog.Event) {
+	e.Stringer("oldSourceRelPath", s.oldSourceRelPath)
+	e.Stringer("newSourceRelPath", s.newSourceRelPath)
 }
 
 // Order returns s's order.
