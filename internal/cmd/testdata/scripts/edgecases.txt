@@ -57,5 +57,4 @@ chezmoi verify
     stripComponents = 1
 -- home3/user/.local/share/chezmoi/dot_dir/dir/file --
 # contents of dir/file
--- home3/user/.local/share/chezmoi/dot_dir/.keep --
 -- www/.keep --
