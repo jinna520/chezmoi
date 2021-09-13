@@ -828,8 +828,8 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 		}
 	}
 
-	// Check for duplicate source entries with the same target name. Iterate
-	// over the target names in order so that any error is deterministic.
+	// Check for inconsistent source entries. Iterate over the target names in
+	// order so that any error is deterministic.
 	targetRelPaths := make([]RelPath, 0, len(allSourceStateEntries))
 	for targetRelPath := range allSourceStateEntries {
 		targetRelPaths = append(targetRelPaths, targetRelPath)
@@ -840,9 +840,25 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 	var err error
 	for _, targetRelPath := range targetRelPaths {
 		sourceStateEntries := allSourceStateEntries[targetRelPath]
+
+		// If there is only on source state entry then it cannot be inconsistent.
 		if len(sourceStateEntries) == 1 {
 			continue
 		}
+
+		// Check for inconsistent source state entries.
+		inconsistent := false
+		for _, sourceStateEntry := range sourceStateEntries[1:] {
+			if !sourceStateEntry.Equivalent(sourceStateEntries[0]) {
+				inconsistent = true
+				break
+			}
+		}
+		if !inconsistent {
+			continue
+		}
+
+		// By now, we've found inconsistent target state entries, so construct an error.
 		sourceRelPaths := make([]SourceRelPath, 0, len(sourceStateEntries))
 		for _, sourceStateEntry := range sourceStateEntries {
 			sourceRelPaths = append(sourceRelPaths, sourceStateEntry.SourceRelPath())
@@ -850,7 +866,7 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 		sort.Slice(sourceRelPaths, func(i, j int) bool {
 			return sourceRelPaths[i].relPath < sourceRelPaths[j].relPath
 		})
-		err = multierr.Append(err, &duplicateTargetError{
+		err = multierr.Append(err, &inconsistentStateError{
 			targetRelPath:  targetRelPath,
 			sourceRelPaths: sourceRelPaths,
 		})
@@ -1509,7 +1525,8 @@ func (s *SourceState) readExternalArchive(ctx context.Context, externalRelPath R
 		externalRelPath: {
 			&SourceStateDir{
 				Attr: DirAttr{
-					Exact: external.Exact,
+					TargetName: externalRelPath.String(),
+					Exact:      external.Exact,
 				},
 				sourceRelPath: sourceRelPath,
 				targetStateEntry: &TargetStateDir{
@@ -1549,7 +1566,10 @@ func (s *SourceState) readExternalArchive(ctx context.Context, externalRelPath R
 			}
 			sourceStateEntry = &SourceStateDir{
 				Attr: DirAttr{
-					Exact: external.Exact,
+					TargetName: info.Name(),
+					Exact:      external.Exact,
+					Private:    isPrivate(info),
+					ReadOnly:   isReadOnly(info),
 				},
 				sourceRelPath:    sourceRelPath,
 				targetStateEntry: targetStateEntry,
@@ -1561,8 +1581,12 @@ func (s *SourceState) readExternalArchive(ctx context.Context, externalRelPath R
 			}
 			lazyContents := newLazyContents(contents)
 			fileAttr := FileAttr{
-				Empty:      true,
-				Executable: info.Mode().Perm()&0o111 != 0,
+				TargetName: info.Name(),
+				Type:       SourceFileTypeFile,
+				Empty:      info.Size() == 0,
+				Executable: isExecutable(info),
+				Private:    isPrivate(info),
+				ReadOnly:   isReadOnly(info),
 			}
 			targetStateEntry := &TargetStateFile{
 				lazyContents: lazyContents,
@@ -1570,6 +1594,7 @@ func (s *SourceState) readExternalArchive(ctx context.Context, externalRelPath R
 				perm:         fileAttr.perm() &^ s.umask,
 			}
 			sourceStateEntry = &SourceStateFile{
+				lazyContents:     lazyContents,
 				Attr:             fileAttr,
 				sourceRelPath:    sourceRelPath,
 				targetStateEntry: targetStateEntry,
@@ -1579,6 +1604,10 @@ func (s *SourceState) readExternalArchive(ctx context.Context, externalRelPath R
 				lazyLinkname: newLazyLinkname(linkname),
 			}
 			sourceStateEntry = &SourceStateFile{
+				Attr: FileAttr{
+					TargetName: info.Name(),
+					Type:       SourceFileTypeSymlink,
+				},
 				sourceRelPath:    sourceRelPath,
 				targetStateEntry: targetStateEntry,
 			}

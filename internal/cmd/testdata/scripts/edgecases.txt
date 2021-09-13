@@ -34,7 +34,28 @@ mkdir $HOME/.dir
 chezmoi add $HOME${/}.dir/
 ! exists $CHEZMOISOURCEDIR/dot_dir/dot_dir
 
+# test that multiple equivalent source state entries are merged and do not cause an error
+chhome home3/user
+exec tar czf www/archive.tar.gz archive
+httpd www
+chezmoi verify
+
+-- archive/dir/file --
+# contents of dir/file
 -- golden/.file --
 # contents of .file
+-- golden/dir/file --
+# contents of dir/file
 -- home2/user/.local/share/chezmoi/dot_file --
 # contents of .file
+-- home3/user/.dir/dir/file --
+# contents of dir/file
+-- home3/user/.local/share/chezmoi/.chezmoiexternal.toml --
+[".dir"]
+    type = "archive"
+    url = "{{ env "HTTPD_URL" }}/archive.tar.gz"
+    stripComponents = 1
+-- home3/user/.local/share/chezmoi/dot_dir/dir/file --
+# contents of dir/file
+-- home3/user/.local/share/chezmoi/dot_dir/.keep --
+-- www/.keep --

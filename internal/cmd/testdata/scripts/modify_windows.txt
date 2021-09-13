@@ -8,7 +8,7 @@ cmp $HOME/.file golden/modified
 # test that chezmoi apply returns an error when there are multiple modify scripts for the same target
 chhome home2/user
 ! chezmoi apply
-stderr 'duplicate source state entries'
+stderr 'inconsistent state entries'
 
 -- golden/modified --
 # modified
