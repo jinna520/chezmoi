@@ -65,6 +65,12 @@ func (noUpdateSystemMixin) WriteFile(filename AbsPath, data []byte, perm fs.File
 }
 func (noUpdateSystemMixin) WriteSymlink(oldname string, newname AbsPath) error { panic(nil) }
 
+// A nullSystem is empty and panics on any update.
+type nullSystem struct {
+	emptySystemMixin
+	noUpdateSystemMixin
+}
+
 // MkdirAll is the equivalent of os.MkdirAll but operates on system.
 func MkdirAll(system System, absPath AbsPath, perm fs.FileMode) error {
 	switch err := system.Mkdir(absPath, perm); {

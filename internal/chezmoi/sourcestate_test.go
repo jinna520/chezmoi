@@ -830,7 +830,6 @@ func TestSourceStateRead(t *testing.T) {
 					"dot_file.tmpl": "# contents of .file\n",
 				},
 			},
-			expectedError: ".file: inconsistent state (dot_file, dot_file.tmpl)",
 		},
 		{
 			name: "duplicate_target_dir",
@@ -844,7 +843,6 @@ func TestSourceStateRead(t *testing.T) {
 					},
 				},
 			},
-			expectedError: "dir: inconsistent state (dir, exact_dir)",
 		},
 		{
 			name: "duplicate_target_script",
@@ -854,7 +852,6 @@ func TestSourceStateRead(t *testing.T) {
 					"run_once_script": "#!/bin/sh\n",
 				},
 			},
-			expectedError: "script: inconsistent state (run_once_script, run_script)",
 		},
 		{
 			name: "symlink_with_attr",
@@ -1210,7 +1207,9 @@ func TestSourceStateRead(t *testing.T) {
 				err := s.Read(ctx, nil)
 				if tc.expectedError != "" {
 					assert.Error(t, err)
-					assert.Equal(t, tc.expectedError, err.Error())
+					if err != nil {
+						assert.Equal(t, tc.expectedError, err.Error())
+					}
 					return
 				}
 				require.NoError(t, err)

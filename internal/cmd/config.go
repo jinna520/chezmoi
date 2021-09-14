@@ -1171,6 +1171,7 @@ func (c *Config) newSourceState(ctx context.Context, options ...chezmoi.SourceSt
 
 	if err := s.Read(ctx, &chezmoi.ReadOptions{
 		RefreshExternals: c.refreshExternals,
+		Umask:            c.Umask,
 	}); err != nil {
 		return nil, err
 	}

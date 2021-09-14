@@ -72,6 +72,18 @@ func (t *TargetStateDir) Apply(system System, persistentState PersistentState, a
 	return true, system.Mkdir(actualStateEntry.Path(), t.perm)
 }
 
+// Equivalent returns true if other is equivalent to t.
+func (t *TargetStateDir) Equivalent(other TargetStateEntry) bool {
+	otherDir, ok := other.(*TargetStateDir)
+	if !ok {
+		return false
+	}
+	if otherDir.perm != t.perm {
+		return false
+	}
+	return true
+}
+
 // EntryState returns t's entry state.
 func (t *TargetStateDir) EntryState(umask fs.FileMode) (*EntryState, error) {
 	return &EntryState{
@@ -126,6 +138,35 @@ func (t *TargetStateFile) Apply(system System, persistentState PersistentState, 
 	return true, system.WriteFile(actualStateEntry.Path(), contents, t.perm)
 }
 
+// Equivalent returns true if other is equivalent to t.
+func (t *TargetStateFile) Equivalent(other TargetStateEntry) bool {
+	otherFile, ok := other.(*TargetStateFile)
+	if !ok {
+		return false
+	}
+	if otherFile.empty != t.empty {
+		return false
+	}
+	if otherFile.overwrite != t.overwrite {
+		return false
+	}
+	if otherFile.perm != t.perm {
+		return false
+	}
+	contents, err := t.Contents()
+	if err != nil {
+		return false
+	}
+	otherContents, err := otherFile.Contents()
+	if err != nil {
+		return false
+	}
+	if !bytes.Equal(contents, otherContents) {
+		return false
+	}
+	return true
+}
+
 // EntryState returns t's entry state.
 func (t *TargetStateFile) EntryState(umask fs.FileMode) (*EntryState, error) {
 	contents, err := t.Contents()
@@ -172,6 +213,12 @@ func (t *TargetStateRemove) Apply(system System, persistentState PersistentState
 		return false, nil
 	}
 	return true, system.RemoveAll(actualStateEntry.Path())
+}
+
+// Equivalent returns true if other is equivalent to t.
+func (t *TargetStateRemove) Equivalent(other TargetStateEntry) bool {
+	_, ok := other.(*TargetStateRemove)
+	return ok
 }
 
 // EntryState returns t's entry state.

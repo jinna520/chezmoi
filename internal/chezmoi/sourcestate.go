@@ -637,6 +637,7 @@ func (s *SourceState) MustEntry(targetRelPath RelPath) SourceStateEntry {
 // ReadOptions are options to SourceState.Read.
 type ReadOptions struct {
 	RefreshExternals bool
+	Umask            fs.FileMode
 }
 
 // Read reads the source state from the source directory.
@@ -848,12 +849,26 @@ func (s *SourceState) Read(ctx context.Context, options *ReadOptions) error {
 
 		// Check for inconsistent source state entries.
 		inconsistent := false
+		var nullSystem nullSystem
+		destDirAbsPath := AbsPath("/")
+		targetStateEntry0, err := sourceStateEntries[0].TargetStateEntry(nullSystem, destDirAbsPath)
+		if err != nil {
+			return err
+		}
+		targetEntryState0, err := targetStateEntry0.EntryState(s.umask)
+		if err != nil {
+			return err
+		}
 		for _, sourceStateEntry := range sourceStateEntries[1:] {
-			if !sourceStateEntry.Equivalent(sourceStateEntries[0]) {
-				log.Debug().
-					Object("sourceStateEntry", sourceStateEntry).
-					Object("sourceStateEntry0", sourceStateEntries[0]).
-					Msg("inconsistent source state entry")
+			targetStateEntry, err := sourceStateEntry.TargetStateEntry(nullSystem, destDirAbsPath)
+			if err != nil {
+				return err
+			}
+			targetEntryState, err := targetStateEntry.EntryState(s.umask)
+			if err != nil {
+				return err
+			}
+			if !targetEntryState0.Equal(targetEntryState) {
 				inconsistent = true
 				break
 			}

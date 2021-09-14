@@ -1,7 +1,6 @@
 mksourcedir
 
 # test inconsistent state detection
-cp $CHEZMOISOURCEDIR/dot_file $CHEZMOISOURCEDIR/empty_dot_file
 ! chezmoi verify
 stderr 'inconsistent state'
 
@@ -27,6 +26,7 @@ stderr 'inconsistent state'
 
 # FIXME add more tests
 
+-- home/user/.local/share/chezmoi/empty_dot_file --
 -- home2/user/.config/chezmoi/chezmoi.json --
 {
 -- home3/user/.local/share/chezmoi --
@@ -34,6 +34,6 @@ stderr 'inconsistent state'
 -- home4/user/.local/share/chezmoi/.chezmoiversion --
 3.0.0
 -- home5/user/.local/share/chezmoi/run_install_packages --
-# contents of install_packages
+# contents of run_install_packages
 -- home5/user/.local/share/chezmoi/run_once_install_packages --
-# contents of install_packages
+# contents of run_once_install_packages
