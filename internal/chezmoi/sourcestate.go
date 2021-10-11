@@ -956,6 +956,9 @@ func (s *SourceState) addExternal(sourceAbsPath AbsPath) error {
 	}
 	for relPath, external := range externals {
 		targetRelPath := parentTargetSourceRelPath.Join(relPath)
+		if s.Ignored(targetRelPath) {
+			continue
+		}
 		if _, ok := s.externals[targetRelPath]; ok {
 			return fmt.Errorf("%s: duplicate externals", targetRelPath)
 		}
